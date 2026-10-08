@@ -8,15 +8,20 @@ int main(void)
 {
     FrameParser parser;
     ParsedFrame frame;
+    ParserResult result;
+
 
     /* =========================================================
        TEST 1: Valid frame
-       Frame: AA 03 01 02 03 72
+
+       Frame:
+       AA 03 01 02 03 72
        ========================================================= */
 
     parser_init(&parser);
 
-    uint8_t valid_frame[] = {
+    uint8_t valid_frame[] =
+    {
         0xAA,   /* START */
         0x03,   /* LENGTH */
         0x01,   /* PAYLOAD */
@@ -25,7 +30,7 @@ int main(void)
         0x72    /* CRC */
     };
 
-    ParserResult result = PARSER_NONE;
+    result = PARSER_NONE;
 
     for (int i = 0; i < 6; i++)
     {
@@ -53,7 +58,8 @@ int main(void)
 
     parser_init(&parser);
 
-    uint8_t invalid_crc_frame[] = {
+    uint8_t invalid_crc_frame[] =
+    {
         0xAA,
         0x03,
         0x01,
@@ -84,7 +90,8 @@ int main(void)
 
     parser_init(&parser);
 
-    uint8_t unexpected_bytes[] = {
+    uint8_t unexpected_bytes[] =
+    {
         0x10,
         0x20,
         0x55,
@@ -124,7 +131,8 @@ int main(void)
     parser_init(&parser);
 
     /* First part */
-    uint8_t part1[] = {
+    uint8_t part1[] =
+    {
         0xAA,
         0x03,
         0x01
@@ -145,7 +153,8 @@ int main(void)
     assert(result == PARSER_NONE);
 
     /* Second part */
-    uint8_t part2[] = {
+    uint8_t part2[] =
+    {
         0x02,
         0x03,
         0x72
@@ -172,13 +181,15 @@ int main(void)
 
     /* =========================================================
        TEST 5: Oversized payload
+
        LENGTH = 65
        Maximum allowed = 64
        ========================================================= */
 
     parser_init(&parser);
 
-    uint8_t oversized_frame[] = {
+    uint8_t oversized_frame[] =
+    {
         0xAA,
         65
     };
@@ -206,12 +217,15 @@ int main(void)
 
     /* =========================================================
        TEST 6: Zero-length payload
-       Frame: AA 00 00
+
+       Frame:
+       AA 00 00
        ========================================================= */
 
     parser_init(&parser);
 
-    uint8_t zero_length_frame[] = {
+    uint8_t zero_length_frame[] =
+    {
         0xAA,
         0x00,
         0x00
@@ -236,22 +250,17 @@ int main(void)
 
 
     /* =========================================================
-       ALL TESTS PASSED
+       TEST 7: START byte recovery
+
+       Stream:
+       AA AA 03 01 02 03 72
+
+       The second AA is initially interpreted as
+       LENGTH = 170, which is invalid.
+
+       Since AA is also START_BYTE, the parser should
+       treat it as the beginning of a new frame.
        ========================================================= */
-
-    printf("\nAll parser tests passed!\n");
-    /* =========================================================
-   TEST 4: Recovery when START_BYTE appears as invalid length
-
-   Stream:
-   AA AA 03 01 02 03 72
-
-   The second AA is initially interpreted as LENGTH = 170,
-   which is invalid.
-
-   Since AA is also START_BYTE, the parser should treat it
-   as the beginning of a new frame.
-   ========================================================= */
 
     parser_init(&parser);
 
@@ -285,6 +294,13 @@ int main(void)
     assert(frame.payload[2] == 0x03);
 
     printf("START byte recovery test passed!\n");
+
+
+    /* =========================================================
+       ALL TESTS PASSED
+       ========================================================= */
+
+    printf("\nAll parser tests passed!\n");
 
     return 0;
 }
