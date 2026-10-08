@@ -21,6 +21,14 @@ typedef enum
     FRAME_INVALID
 } ParserResult;
 
+/* A successfully parsed frame */
+typedef struct
+{
+    uint8_t length;
+    uint8_t payload[MAX_PAYLOAD_SIZE];
+} ParsedFrame;
+
+/* Internal parser state */
 typedef struct
 {
     ParserState state;
@@ -34,6 +42,10 @@ typedef struct
 
 void parser_init(FrameParser *parser);
 
-ParserResult parser_process_byte(FrameParser *parser, uint8_t byte);
+ParserResult parser_process_byte(
+    FrameParser *parser,
+    uint8_t byte,
+    ParsedFrame *frame
+);
 
 #endif

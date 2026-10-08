@@ -1,5 +1,6 @@
 #include "parser.h"
 #include "crc8.h"
+
 void parser_init(FrameParser *parser)
 {
     parser->state = WAIT_START;
@@ -8,9 +9,14 @@ void parser_init(FrameParser *parser)
     parser->received_crc = 0;
 }
 
-ParserResult parser_process_byte(FrameParser *parser, uint8_t byte)
+ParserResult parser_process_byte(
+    FrameParser *parser,
+    uint8_t byte,
+    ParsedFrame *frame
+)
 {
     ParserResult result = PARSER_NONE;
+
     switch (parser->state)
     {
         case WAIT_START:
@@ -26,13 +32,23 @@ ParserResult parser_process_byte(FrameParser *parser, uint8_t byte)
 
             if (byte > MAX_PAYLOAD_SIZE)
             {
+                /* Invalid length, discard the frame */
                 parser->state = WAIT_START;
             }
             else
             {
                 parser->length = byte;
                 parser->payload_index = 0;
-                parser->state = READ_PAYLOAD;
+
+                if (parser->length == 0)
+                {
+                    /* No payload, so the next byte is CRC */
+                    parser->state = READ_CRC;
+                }
+                else
+                {
+                    parser->state = READ_PAYLOAD;
+                }
             }
 
             break;
@@ -53,7 +69,11 @@ ParserResult parser_process_byte(FrameParser *parser, uint8_t byte)
         {
             parser->received_crc = byte;
 
-            uint8_t crc_data[65];
+            /*
+             * CRC is calculated over:
+             * LENGTH + PAYLOAD
+             */
+            uint8_t crc_data[MAX_PAYLOAD_SIZE + 1];
 
             crc_data[0] = parser->length;
 
@@ -62,21 +82,35 @@ ParserResult parser_process_byte(FrameParser *parser, uint8_t byte)
                 crc_data[i + 1] = parser->payload[i];
             }
 
-            uint8_t calculated_crc = crc8(crc_data, parser->length + 1);
-
+            uint8_t calculated_crc =
+                crc8(crc_data, parser->length + 1);
 
             if (calculated_crc == parser->received_crc)
             {
                 result = FRAME_VALID;
+
+                /*
+                 * Copy the successfully parsed frame
+                 * to the output structure.
+                 */
+                frame->length = parser->length;
+
+                for (uint8_t i = 0; i < parser->length; i++)
+                {
+                    frame->payload[i] = parser->payload[i];
+                }
             }
             else
             {
                 result = FRAME_INVALID;
             }
+
+            /* Ready for the next frame */
             parser->state = WAIT_START;
 
             break;
         }
     }
+
     return result;
 }
