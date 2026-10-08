@@ -240,6 +240,51 @@ int main(void)
        ========================================================= */
 
     printf("\nAll parser tests passed!\n");
+    /* =========================================================
+   TEST 4: Recovery when START_BYTE appears as invalid length
+
+   Stream:
+   AA AA 03 01 02 03 72
+
+   The second AA is initially interpreted as LENGTH = 170,
+   which is invalid.
+
+   Since AA is also START_BYTE, the parser should treat it
+   as the beginning of a new frame.
+   ========================================================= */
+
+    parser_init(&parser);
+
+    uint8_t repeated_start_frame[] =
+    {
+        0xAA,
+        0xAA,
+        0x03,
+        0x01,
+        0x02,
+        0x03,
+        0x72
+    };
+
+    result = PARSER_NONE;
+
+    for (int i = 0; i < 7; i++)
+    {
+        result = parser_process_byte(
+            &parser,
+            repeated_start_frame[i],
+            &frame
+        );
+    }
+
+    assert(result == FRAME_VALID);
+
+    assert(frame.length == 3);
+    assert(frame.payload[0] == 0x01);
+    assert(frame.payload[1] == 0x02);
+    assert(frame.payload[2] == 0x03);
+
+    printf("START byte recovery test passed!\n");
 
     return 0;
 }

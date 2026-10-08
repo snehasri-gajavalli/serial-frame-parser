@@ -27,31 +27,43 @@ ParserResult parser_process_byte(
             }
 
             break;
-
         case READ_LENGTH:
 
-            if (byte > MAX_PAYLOAD_SIZE)
+        if (byte > MAX_PAYLOAD_SIZE)
+        {
+        /*
+         * Invalid length.
+         *
+         * If the invalid byte is also START_BYTE,
+         * treat it as the beginning of a new frame.
+         */
+            if (byte == START_BYTE)
             {
-                /* Invalid length, discard the frame */
-                parser->state = WAIT_START;
+                parser->state = READ_LENGTH;
             }
             else
             {
-                parser->length = byte;
-                parser->payload_index = 0;
-
-                if (parser->length == 0)
-                {
-                    /* No payload, so the next byte is CRC */
-                    parser->state = READ_CRC;
-                }
-                else
-                {
-                    parser->state = READ_PAYLOAD;
-                }
+                parser->state = WAIT_START;
             }
+        }
+        else
+        {
+            parser->length = byte;
+            parser->payload_index = 0;
 
-            break;
+            if (parser->length == 0)
+            {
+            /* No payload, so the next byte is CRC */
+                parser->state = READ_CRC;
+            }
+            else
+            {
+                parser->state = READ_PAYLOAD;
+            }
+        }   
+
+        break;
+        
 
         case READ_PAYLOAD:
 
